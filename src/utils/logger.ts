@@ -1,6 +1,6 @@
 import {LoggerGroup} from "dola-logger";
 
-export const mainGroup = new LoggerGroup("main", {color: "magenta"});
+export const mainGroup = new LoggerGroup("HPoolCalc", {color: "magenta"});
 export const mainLogger = mainGroup.createLogger("main", {color: "magentaBright"});
 
 export const axiosGroup = new LoggerGroup("axios", {color: "yellow"});
