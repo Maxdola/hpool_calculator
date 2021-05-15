@@ -12,10 +12,12 @@
   "dependencies": {
     "axios": "^0.21.1",
     "dola-logger": "^1.0.8",
-    "dotenv": "^9.0.2"
+    "dotenv": "^9.0.2",
+    "moment": "^2.29.1"
   },
   "devDependencies": {
     "@types/dotenv": "^8.2.0",
+    "@types/moment": "^2.13.0",
     "@types/node": "^15.3.0"
   }
 }
