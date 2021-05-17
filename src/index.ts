@@ -3,7 +3,7 @@ dotenv.config();
 
 import {mainLogger} from "./utils/logger";
 import {getPrice} from "./utils/CoinbaseAPI";
-import {getPayouts, getPoolData, PayoutInfo, PoolInfo} from "./utils/HPoolAPI";
+import {getPayouts, getPoolData, getTotalUnsettled, PayoutInfo, PoolInfo} from "./utils/HPoolAPI";
 import moment from "moment";
 
 const run = () => {
@@ -16,13 +16,20 @@ const run = () => {
     console.log();
     mainLogger.debug("Obtaining HPool Data ...");
 
-    getPoolData().then(res => {
+    getPoolData().then(async res => {
       const chiaPoolInfo : PoolInfo = res.data.list.find(pi => pi.coin === "chia");
 
       if (chiaPoolInfo) {
         const balance = parseFloat(chiaPoolInfo.pool_income);
-        const uBalance = parseFloat(chiaPoolInfo.undistributed_income);
+        let uBalance = parseFloat(chiaPoolInfo.undistributed_income);
         const tBalance = balance + uBalance;
+
+        const uBalanceSum = await getTotalUnsettled();
+
+        if (uBalanceSum > uBalance) {
+          mainLogger.warn("HPool reports invalid total Balance.")
+          uBalance = uBalanceSum;
+        }
 
         mainLogger.info(`HPool Balance: ${balance} XCH undistributed: ${uBalance} XCH`);
         //mainLogger.info(`Total Balance: ${tBalance} XCH`);
@@ -37,14 +44,13 @@ const run = () => {
 
             const payoutDate = new Date(latestPayout.record_time * 1000);
             const hours = Math.abs(payoutDate.valueOf() - new Date().valueOf()) / 36e5;
-            mainLogger.info(`Last Payout was ${hours.toFixed(2)} ago.`);
+            mainLogger.info(`Last Payout was ${hours.toFixed(2)} hours ago.`);
 
             const earningEstimate = uBalance * 24/hours;
             const gain = res.data.list.length > 0 ? parseFloat(((earningEstimate/parseFloat(res.data.list[0].amount) - 1) * 100).toFixed(2)) : undefined;
             const gainString = gain ? `${gain < 0 ? " " : "+ "} ${gain}%` : undefined;
 
             mainLogger.info(`Estimated (24h):\t ${earningEstimate.toFixed(8)} XCH x ${price}€ -> ${parseFloat((earningEstimate * price).toFixed(2))}€ \t ${gain ? "| " + gainString : ""}`);
-
 
             console.log();
             mainLogger.info("Past Revenues:");

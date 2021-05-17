@@ -40,6 +40,97 @@ export const getPayouts = () : Promise<Payouts> => {
   });
 }
 
+export const getIndividualPayouts = (count = 50, page = 1) : Promise<IndividualPayouts> => {
+  return new Promise<IndividualPayouts>((resolve, reject) => {
+
+    axios.get<IndividualPayouts>(`https://www.hpool.com/api/pool/miningdetail?language=en&type=chia&count=${count}&page=${page}`, {
+      headers: {
+        cookie: `auth_token=${process.env.AUTH_TOKEN};`
+      }
+    }).then(res => {
+      if (res.data) {
+        resolve(res.data);
+      } else {
+        reject();
+      }
+    }).catch(err => {
+      reject(err);
+    })
+
+  });
+}
+
+export const getUnsettledPayouts = () : Promise<IndividualPayoutInfo[]> => {
+  return new Promise<IndividualPayoutInfo[]>(async resolve => {
+    const payouts : IndividualPayoutInfo[] = [];
+
+    let currentPage : number = 1;
+
+    const getPage = async (page: number) => {
+      return getIndividualPayouts(25, page);
+    }
+
+    const processPage = (page : IndividualPayouts) => {
+      currentPage++;
+      if (page.code === 200) {
+        payouts.push(...page.data.list);
+        if (page.data.list[page.data.list.length - 1].status_str !== "SETTLEMENT") {
+          getPage(currentPage).then(res => {
+            processPage(res);
+          })
+        } else {
+          resolve(payouts);
+        }
+      } else {
+        resolve(payouts);
+      }
+    }
+
+    getPage(currentPage).then(res => {
+      processPage(res);
+    });
+
+  });
+}
+
+export const getTotalUnsettled = () : Promise<number> => {
+    return new Promise<number>(resolve => {
+      getUnsettledPayouts().then(res => {
+        let total = 0;
+        res.forEach(pi => {
+          if (pi.status_str == "UNSETTLEMENT") {
+            total += parseFloat(pi.block_reward);
+          }
+        });
+        resolve(total);
+      });
+    });
+}
+
+export interface IndividualPayouts {
+  code: number;
+  data: IndividualData;
+}
+
+export interface IndividualData {
+  list:  IndividualPayoutInfo[];
+  page:  number;
+  total: number;
+}
+
+export interface IndividualPayoutInfo {
+  block_reward:    string;
+  coin:            "chia";
+  height:          string;
+  huge_reward:     string;
+  mortgage_rate_k: number;
+  name:            "CHIA";
+  record_time:     number;
+  status:          number;
+  status_str:      "SETTLEMENT" | "UNSETTLEMENT";
+  type:            "chia";
+}
+
 export interface Payouts {
   code: number;
   data: PayoutData;
